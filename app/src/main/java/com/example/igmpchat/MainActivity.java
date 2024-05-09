@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
@@ -30,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
     private DeviceIPAdapter deviceIPAdapter;
     private boolean igmpHelloEnabled = false;
 
+    private String currentIP;
+    private DatagramSocket datagramSocket;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +59,9 @@ public class MainActivity extends AppCompatActivity {
             deviceIPAdapter = new DeviceIPAdapter(messageHandler.getDeviceIPs());
             recyclerViewDeviceIPs.setAdapter(deviceIPAdapter);
             messageHandler.enableIGMPHello();
+            messageHandler.initUDPReceiver(12346); // Настройка приемника для прослушивания порта 12345
+            messageHandler.receiveUDPMessage();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -66,34 +72,36 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(int position) {
                 // Обработка нажатия на элемент списка
                 String deviceIP = messageHandler.getDeviceIPs().get(position);
-                // Действия при нажатии на элемент списка
-                Toast.makeText(MainActivity.this, "Selected device IP: " + deviceIP, Toast.LENGTH_SHORT).show();
+                currentIP = deviceIP;
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        messageHandler.establishUDPConnection(deviceIP, 12345);
+                    }
+                }).start();
 
             }
         });
         myButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String message = editMessage.getText().toString();
+                String message = "hello hesus";
 
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        messageHandler.sendMessage(message, multicastManager.getMulticastGroup(), multicastManager.getMulticastPort());
+                        messageHandler.sendMessageUDP(message, currentIP, 12346);
                     }
                 }).start();
             }
         });
 
-        myButtonRefresh.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (messageHandler == null) return;
-                // Обновление списка устройств при нажатии на кнопку Refresh
-                ArrayList<String> updatedDeviceIPs = messageHandler.getDeviceIPs(); // Получите новый список устройств
-                deviceIPAdapter.updateDeviceIPs(updatedDeviceIPs);
+        myButtonRefresh.setOnClickListener(view -> {
+            if (messageHandler == null) return;
+            // Обновление списка устройств при нажатии на кнопку Refresh
+            ArrayList<String> updatedDeviceIPs = messageHandler.getDeviceIPs(); // Получите новый список устройств
+            deviceIPAdapter.updateDeviceIPs(updatedDeviceIPs);
 
-            }
         });
         igmpHelloSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -108,10 +116,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-
-
-
-
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
