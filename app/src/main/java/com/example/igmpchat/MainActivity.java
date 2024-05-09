@@ -14,18 +14,20 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-    private Button myButton;
     private EditText editMessage;
-    private MultiAutoCompleteTextView messageOut;
     private MulticastManager multicastManager;
     private MessageHandler messageHandler;
 
-    private Switch igmpHelloSwitch;
-
+    private Button myButtonRefresh;
+    private RecyclerView recyclerViewDeviceIPs;
+    private DeviceIPAdapter deviceIPAdapter;
     private boolean igmpHelloEnabled = false;
 
 
@@ -34,22 +36,41 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+        // Инициализация RecyclerView
+        recyclerViewDeviceIPs = findViewById(R.id.recyclerViewDeviceIPs);
+        recyclerViewDeviceIPs.setLayoutManager(new LinearLayoutManager(this));
+        myButtonRefresh = findViewById(R.id.buttonRefresh);
 
-        myButton = findViewById(R.id.button);
+
+
+        Button myButton = findViewById(R.id.button);
         editMessage = findViewById(R.id.editMessage);
-        messageOut = findViewById(R.id.idMessages);
-        igmpHelloSwitch = findViewById(R.id.igmpHelloSwitch);
+        Switch igmpHelloSwitch = findViewById(R.id.igmpHelloSwitch);
 
         multicastManager = new MulticastManager("239.255.255.250", 1900);
         try {
             multicastManager.connect();
             messageHandler = new MessageHandler(multicastManager.getSocket(), multicastManager.getMulticastGroup(), multicastManager.getMulticastPort());
             messageHandler.startListening();
+            // Создание адаптера и установка его в RecyclerView
+            deviceIPAdapter = new DeviceIPAdapter(messageHandler.getDeviceIPs());
+            recyclerViewDeviceIPs.setAdapter(deviceIPAdapter);
             messageHandler.enableIGMPHello();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+        // Установка обработчика нажатия на элемент списка
+        deviceIPAdapter.setOnItemClickListener(new DeviceIPAdapter.OnItemClickListener() {
+            @Override
+            public void onItemClick(int position) {
+                // Обработка нажатия на элемент списка
+                String deviceIP = messageHandler.getDeviceIPs().get(position);
+                // Действия при нажатии на элемент списка
+                Toast.makeText(MainActivity.this, "Selected device IP: " + deviceIP, Toast.LENGTH_SHORT).show();
+
+            }
+        });
         myButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -64,6 +85,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        myButtonRefresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (messageHandler == null) return;
+                // Обновление списка устройств при нажатии на кнопку Refresh
+                ArrayList<String> updatedDeviceIPs = messageHandler.getDeviceIPs(); // Получите новый список устройств
+                deviceIPAdapter.updateDeviceIPs(updatedDeviceIPs);
+
+            }
+        });
         igmpHelloSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -78,26 +109,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Отображение полученных сообщений
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    String receivedMessage = '\n'+messageHandler.getLastReceivedMessage();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            messageOut.append(receivedMessage);
-                        }
-                    });
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
+
+
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());

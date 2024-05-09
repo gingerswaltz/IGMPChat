@@ -74,7 +74,7 @@ public class MessageHandler {
                     String ipAddress = getLocalIPAddress(); // Получение IP-адреса устройства
                     String message = "IGMP Hello " + ipAddress;
                     sendMessage(message, multicastGroup, multicastPort);
-                    Log.d("IGMP HELLO SENDER", "Sending igmp hello: " + message);
+                    //Log.d("IGMP HELLO SENDER", "Sending igmp hello: " + message);
 
                     Thread.sleep(3000); // Отправка каждые 3 секунды
                 }
