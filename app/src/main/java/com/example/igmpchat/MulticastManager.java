@@ -4,12 +4,12 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.ArrayList;
 
 public class MulticastManager {
     private MulticastSocket socket;
     private InetAddress multicastGroup;
     private int multicastPort;
-
     public MulticastManager(String multicastGroup, int multicastPort) {
         try {
             this.multicastGroup = InetAddress.getByName(multicastGroup);

@@ -44,4 +44,18 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.219" />
 
+    <Switch
+        android:id="@+id/igmpHelloSwitch"
+        android:layout_width="99dp"
+        android:layout_height="23dp"
+        android:text="Search"
+        android:checked="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.965"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.977"
+        />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

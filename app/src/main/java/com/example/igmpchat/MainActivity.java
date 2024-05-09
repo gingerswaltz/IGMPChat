@@ -3,8 +3,10 @@ package com.example.igmpchat;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.MultiAutoCompleteTextView;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -22,6 +24,11 @@ public class MainActivity extends AppCompatActivity {
     private MulticastManager multicastManager;
     private MessageHandler messageHandler;
 
+    private Switch igmpHelloSwitch;
+
+    private boolean igmpHelloEnabled = false;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,12 +38,14 @@ public class MainActivity extends AppCompatActivity {
         myButton = findViewById(R.id.button);
         editMessage = findViewById(R.id.editMessage);
         messageOut = findViewById(R.id.idMessages);
+        igmpHelloSwitch = findViewById(R.id.igmpHelloSwitch);
 
         multicastManager = new MulticastManager("239.255.255.250", 1900);
         try {
             multicastManager.connect();
-            messageHandler = new MessageHandler(multicastManager.getSocket());
+            messageHandler = new MessageHandler(multicastManager.getSocket(), multicastManager.getMulticastGroup(), multicastManager.getMulticastPort());
             messageHandler.startListening();
+            messageHandler.enableIGMPHello();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -55,16 +64,30 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        igmpHelloSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                igmpHelloEnabled = isChecked;
+                if (isChecked) {
+                    // Запуск потока для отправки IGMP Hello
+                    messageHandler.enableIGMPHello();
+                } else {
+                    // Остановка отправки IGMP Hello
+                    messageHandler.disableIGMPHello();
+                }
+            }
+        });
+
         // Отображение полученных сообщений
         new Thread(new Runnable() {
             @Override
             public void run() {
                 while (true) {
-                    String receivedMessage = messageHandler.getLastReceivedMessage();
+                    String receivedMessage = '\n'+messageHandler.getLastReceivedMessage();
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            messageOut.setText(receivedMessage);
+                            messageOut.append(receivedMessage);
                         }
                     });
                     try {
