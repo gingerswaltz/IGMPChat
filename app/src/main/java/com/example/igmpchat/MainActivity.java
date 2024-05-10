@@ -81,6 +81,8 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
                 public void run() {
                     messageHandler.sendMessageUDPStart();
                     Intent intent = new Intent(MainActivity.this, UDPChat.class);
+                    intent.putExtra("currentIpaddress", currentIP);
+                    intent.putExtra("nickName", messageHandler.getNickName());
                     startActivity(intent);
                 }
             }).start();
@@ -136,11 +138,15 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
     }
 
     @Override
-    public void onReceiveStartChat() {
+    public void onReceiveStartChat(String ipAddress) {
         // Реакция на событие "START_CHAT"
         runOnUiThread(() -> {
             // Ваш код для запуска новой активности или выполнения других действий
+            currentIP = ipAddress;
             Intent intent = new Intent(MainActivity.this, UDPChat.class);
+
+            intent.putExtra("currentIpaddress", currentIP);
+            intent.putExtra("nickName", messageHandler.getNickName());
             startActivity(intent);
         });
     }

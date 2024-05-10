@@ -18,7 +18,6 @@ import java.util.List;
 
 public class MessageHandler implements Serializable {
     private MulticastSocket socket;
-    private String lastReceivedMessage = "";
     private ArrayList<String> deviceIPs = new ArrayList<>();
     private String currentIpUdp;
     private DatagramSocket datagramSocket;
@@ -34,9 +33,9 @@ public class MessageHandler implements Serializable {
         observers.remove(observer);
     }
 
-    private void notifyObservers() {
+    private void notifyObservers(String ipAddress) {
         for (MessageObserver observer : observers) {
-            observer.onReceiveStartChat();
+            observer.onReceiveStartChat(ipAddress);
         }
     }
     public MessageHandler(MulticastSocket socket, InetAddress multicastGroup, int multicastPort) {
@@ -86,7 +85,6 @@ public class MessageHandler implements Serializable {
                         processIGMPHelloMessage(message);
                     } else
                     if (!message.startsWith("M-SEARCH") && !message.startsWith("NOTIFY")) {
-                        lastReceivedMessage = message;
                         //Log.d("MessageHandler", "Received message: " + message);
                     }
                 }
@@ -110,7 +108,7 @@ public class MessageHandler implements Serializable {
         DatagramSocket socket = null;
         try {
             int port = 12346;
-            String message = "START_CHAT";
+            String message = "START_CHAT, IP:"+getLocalIPAddress();
 
             socket = new DatagramSocket();
             InetAddress address = InetAddress.getByName(currentIpUdp);
@@ -234,7 +232,9 @@ public class MessageHandler implements Serializable {
                     datagramSocket.receive(packet);
                     String message = new String(packet.getData(), 0, packet.getLength());
                     if(message.startsWith("START_CHAT")){
-                        notifyObservers();
+                        String[] parts = message.split(":");
+                        String ipAddress = parts[1].trim();
+                        notifyObservers(ipAddress);
                     }
 
                     Log.d("UDPReceiver", "Received message: " + message);

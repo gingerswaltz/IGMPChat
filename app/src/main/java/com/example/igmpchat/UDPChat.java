@@ -1,6 +1,8 @@
 package com.example.igmpchat;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.text.Html;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -20,7 +22,9 @@ public class UDPChat extends AppCompatActivity {
     private Button buttonSend;
     private EditText editText;
     private LinearLayout messageContainer;
-
+    private UdpManager udpManager;
+    private String currentIpAddress = null;
+    private String nickName;
     private ScrollView scrollView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,7 +35,29 @@ public class UDPChat extends AppCompatActivity {
         buttonSend = findViewById(R.id.buttonSend);
         scrollView = findViewById(R.id.scrollView);
         messageContainer = findViewById(R.id.messageContainer);
+        Intent intent = getIntent();
 
+
+
+        // Получение данных из Intent
+        if (intent != null) {
+            Bundle extras = intent.getExtras();
+            if (extras != null) {
+                // Получение текущего IP-адреса
+                 currentIpAddress = extras.getString("currentIpaddress");
+
+                // Получение никнейма
+                 nickName = extras.getString("nickName");
+            }
+        }
+        try {
+            // Создание экземпляра UdpManager с текущим IP-адресом и портом 12347
+            udpManager = new UdpManager(currentIpAddress, 12347);
+            udpManager.startListening();
+        } catch (Exception e) {
+            // Обработка исключения, возникшего при создании экземпляра UdpManager
+            e.printStackTrace();
+        }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -43,9 +69,10 @@ public class UDPChat extends AppCompatActivity {
         buttonSend.setOnClickListener(v -> {
 
             String message = editText.getText().toString().trim();
-            if (!message.equals("")) {
+            if (!message.isEmpty()) {
                 // Добавляем отправленное сообщение в контейнер сообщений
                 addMessageToContainer("You: " + message);
+                udpManager.sendMessage(message);
                 // Очищаем поле ввода
                 editText.getText().clear();
             } else return;
