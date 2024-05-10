@@ -3,6 +3,8 @@ package com.example.igmpchat;
 import android.util.Log;
 
 import java.io.IOException;
+import java.io.Serial;
+import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
@@ -13,13 +15,24 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.Objects;
 
-public class MessageHandler {
+public class MessageHandler implements Serializable {
     private MulticastSocket socket;
     private String lastReceivedMessage = "";
     private ArrayList<String> deviceIPs = new ArrayList<>();
     private DatagramSocket datagramSocket;
+    private String nickName;
 
+
+    public String getNickName() {
+        return nickName;
+    }
+
+    public void setNickName(String nickName){
+        if (nickName == null || nickName.isEmpty()) return;
+        this.nickName = nickName;
+    }
     // Метод для настройки UDP приемника для прослушивания определенного порта
     public void initUDPReceiver(int port) {
         try {
@@ -55,7 +68,7 @@ public class MessageHandler {
                     } else
                     if (!message.startsWith("M-SEARCH") && !message.startsWith("NOTIFY")) {
                         lastReceivedMessage = message;
-                        Log.d("MessageHandler", "Received message: " + message);
+                        //Log.d("MessageHandler", "Received message: " + message);
                     }
                 }
             } catch (IOException e) {
@@ -76,6 +89,7 @@ public class MessageHandler {
     }
     public void sendMessageUDP(String message, String ipAddress, int port) {
         try {
+            message = nickName + ": " + message;
             DatagramSocket socket = new DatagramSocket();
             InetAddress address = InetAddress.getByName(ipAddress);
 
@@ -168,7 +182,7 @@ public class MessageHandler {
             // Добавление IP-адреса в массив, если его еще нет там
             if (!deviceIPs.contains(ipAddress)) {
                 deviceIPs.add(ipAddress);
-                Log.d("MessageHandler", "New device discovered: " + ipAddress);
+                //Log.d("MessageHandler", "New device discovered: " + ipAddress);
             }
         }
     }

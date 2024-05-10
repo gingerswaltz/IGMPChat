@@ -1,5 +1,6 @@
 package com.example.igmpchat;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -10,6 +11,7 @@ import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -58,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
             // Создание адаптера и установка его в RecyclerView
             deviceIPAdapter = new DeviceIPAdapter(messageHandler.getDeviceIPs());
             recyclerViewDeviceIPs.setAdapter(deviceIPAdapter);
-            messageHandler.enableIGMPHello();
             messageHandler.initUDPReceiver(12346); // Настройка приемника для прослушивания порта 12345
             messageHandler.receiveUDPMessage();
 
@@ -70,6 +71,9 @@ public class MainActivity extends AppCompatActivity {
         deviceIPAdapter.setOnItemClickListener(new DeviceIPAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(int position) {
+                if (messageHandler.getNickName()==null){
+                    showAlert(MainActivity.this, "Не введено имя", "Пожалуйста, введите свое имя и нажмите Submit");
+                }
                 // Обработка нажатия на элемент списка
                 String deviceIP = messageHandler.getDeviceIPs().get(position);
                 currentIP = deviceIP;
@@ -85,12 +89,12 @@ public class MainActivity extends AppCompatActivity {
         myButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String message = "hello hesus";
+                String nickname = String.valueOf(editMessage.getText());
 
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        messageHandler.sendMessageUDP(message, currentIP, 12346);
+                        messageHandler.setNickName(nickname);
                     }
                 }).start();
             }
@@ -129,5 +133,16 @@ public class MainActivity extends AppCompatActivity {
         if (multicastManager != null) {
             multicastManager.disconnect();
         }
+    }
+
+    // Метод для отображения диалогового окна Alert
+    public void showAlert(Context context, String title, String message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(title)          // Установка заголовка диалогового окна
+                .setMessage(message)      // Установка сообщения диалогового окна
+                .setPositiveButton("OK", null);  // Добавление кнопки "OK", без действия
+
+        AlertDialog dialog = builder.create();  // Создание диалогового окна
+        dialog.show();  // Отображение диалогового окна
     }
 }
