@@ -1,5 +1,7 @@
 package com.example.igmpchat;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import java.io.IOException;
@@ -13,12 +15,20 @@ public class UdpManager {
     private boolean running;
     private String ipAddress;
     private int port;
+    private String nickname;
+    private MessageListener messageListener;
+    private Handler handler;
 
-    public UdpManager(String ipAddress, int port) {
-        this.ipAddress=ipAddress;
+    public UdpManager(String ipAddress, int port, String nickname) {
+        this.ipAddress = ipAddress;
         this.port = port;
+        this.nickname = nickname;
         running = false;
+        handler = new Handler(Looper.getMainLooper());
+    }
 
+    public void setMessageListener(MessageListener listener) {
+        this.messageListener = listener;
     }
 
     public void startListening() {
@@ -33,7 +43,10 @@ public class UdpManager {
                         socket.receive(packet);
                         String message = new String(packet.getData(), 0, packet.getLength());
                         Log.d(TAG, "Received message: " + message);
-
+                        if (messageListener != null) {
+                            // Оповещаем слушателя о новом сообщении на основном потоке
+                            handler.post(() -> messageListener.onMessageReceived(message));
+                        }
                     }
                 } catch (IOException e) {
                     Log.e(TAG, "Error while listening for UDP messages: " + e.getMessage());
@@ -53,15 +66,20 @@ public class UdpManager {
         new Thread(() -> {
             try {
                 InetAddress address = InetAddress.getByName(this.ipAddress);
-                byte[] sendData = message.getBytes();
+                String finalMessage=this.nickname+": "+message;
+                byte[] sendData = finalMessage.getBytes();
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, port);
                 DatagramSocket sendSocket = new DatagramSocket();
                 sendSocket.send(sendPacket);
                 sendSocket.close();
-                Log.d(TAG, "Sent message: " + message + " " + this.ipAddress);
+                Log.d(TAG, "Sent message: " + finalMessage + " " + this.ipAddress);
             } catch (IOException e) {
                 Log.e(TAG, "Error while sending UDP message: " + e.getMessage());
             }
         }).start();
+    }
+
+    public interface MessageListener {
+        void onMessageReceived(String message);
     }
 }

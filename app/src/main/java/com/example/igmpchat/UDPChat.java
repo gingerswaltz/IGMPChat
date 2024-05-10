@@ -17,7 +17,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-public class UDPChat extends AppCompatActivity {
+public class UDPChat extends AppCompatActivity implements UdpManager.MessageListener {
 
     private Button buttonSend;
     private EditText editText;
@@ -26,6 +26,7 @@ public class UDPChat extends AppCompatActivity {
     private String currentIpAddress = null;
     private String nickName;
     private ScrollView scrollView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,23 +38,22 @@ public class UDPChat extends AppCompatActivity {
         messageContainer = findViewById(R.id.messageContainer);
         Intent intent = getIntent();
 
-
-
         // Получение данных из Intent
         if (intent != null) {
             Bundle extras = intent.getExtras();
             if (extras != null) {
                 // Получение текущего IP-адреса
-                 currentIpAddress = extras.getString("currentIpaddress");
+                currentIpAddress = extras.getString("currentIpaddress");
 
                 // Получение никнейма
-                 nickName = extras.getString("nickName");
+                nickName = extras.getString("nickName");
             }
         }
         try {
             // Создание экземпляра UdpManager с текущим IP-адресом и портом 12347
-            udpManager = new UdpManager(currentIpAddress, 12347);
-            udpManager.startListening();
+            udpManager = new UdpManager(currentIpAddress, 12347, nickName);
+            udpManager.setMessageListener(this); // Установка текущей активности в качестве слушателя сообщений
+            udpManager.startListening(); // Начало прослушивания входящих сообщений
         } catch (Exception e) {
             // Обработка исключения, возникшего при создании экземпляра UdpManager
             e.printStackTrace();
@@ -79,14 +79,22 @@ public class UDPChat extends AppCompatActivity {
 
         });
     }
+
+    // Метод вызывается при получении нового сообщения
+    @Override
+    public void onMessageReceived(String message) {
+        // Добавьте код для отображения входящего сообщения на интерфейсе
+        addMessageToContainer(message);
+    }
+
     // Метод для добавления сообщения в контейнер сообщений
     private void addMessageToContainer(String message) {
         TextView textView = new TextView(this);
         textView.setText(message);
         // Добавляем текстовое представление в начало контейнера сообщений
         messageContainer.addView(textView);
-        // Прокручиваем ScrollView вверх, чтобы новое сообщение было видимо
+        // Прокручиваем ScrollView вниз, чтобы новое сообщение было видимо
         scrollView.fullScroll(View.FOCUS_DOWN);
     }
+}
 
-    }
