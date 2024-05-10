@@ -1,14 +1,13 @@
 package com.example.igmpchat;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.MultiAutoCompleteTextView;
 import android.widget.Switch;
-import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
@@ -20,10 +19,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MessageObserver {
     private EditText editMessage;
     private MulticastManager multicastManager;
     private MessageHandler messageHandler;
@@ -31,10 +29,9 @@ public class MainActivity extends AppCompatActivity {
     private Button myButtonRefresh;
     private RecyclerView recyclerViewDeviceIPs;
     private DeviceIPAdapter deviceIPAdapter;
-    private boolean igmpHelloEnabled = false;
 
     private String currentIP;
-    private DatagramSocket datagramSocket;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,60 +41,55 @@ public class MainActivity extends AppCompatActivity {
         // Инициализация RecyclerView
         recyclerViewDeviceIPs = findViewById(R.id.recyclerViewDeviceIPs);
         recyclerViewDeviceIPs.setLayoutManager(new LinearLayoutManager(this));
+        // Кнопка обновления списка RecyclerView
         myButtonRefresh = findViewById(R.id.buttonRefresh);
-
-
-
+        // Кнопка submit
         Button myButton = findViewById(R.id.button);
+        // поле ввода никнейма
         editMessage = findViewById(R.id.editMessage);
+        // свитч режима discover
         Switch igmpHelloSwitch = findViewById(R.id.igmpHelloSwitch);
 
         multicastManager = new MulticastManager("239.255.255.250", 1900);
         try {
             multicastManager.connect();
-            messageHandler = new MessageHandler(multicastManager.getSocket(), multicastManager.getMulticastGroup(), multicastManager.getMulticastPort());
+            messageHandler = new MessageHandler(multicastManager.getSocket(),
+                    multicastManager.getMulticastGroup(),
+                    multicastManager.getMulticastPort());
             messageHandler.startListening();
             // Создание адаптера и установка его в RecyclerView
             deviceIPAdapter = new DeviceIPAdapter(messageHandler.getDeviceIPs());
             recyclerViewDeviceIPs.setAdapter(deviceIPAdapter);
-            messageHandler.initUDPReceiver(12346); // Настройка приемника для прослушивания порта 12345
+            messageHandler.initUDPReceiver(12346); // Настройка приемника для прослушивания порта 12346
             messageHandler.receiveUDPMessage();
-
+            messageHandler.addObserver(this); // Добавляем MainActivity в качестве наблюдателя
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         // Установка обработчика нажатия на элемент списка
-        deviceIPAdapter.setOnItemClickListener(new DeviceIPAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(int position) {
-                if (messageHandler.getNickName()==null){
-                    showAlert(MainActivity.this, "Не введено имя", "Пожалуйста, введите свое имя и нажмите Submit");
+        deviceIPAdapter.setOnItemClickListener(position -> {
+            if (messageHandler.getNickName()==null){
+                showAlert(MainActivity.this, "Не введено имя", "Пожалуйста, введите свое имя и нажмите Submit");
+                return;
+            }
+            // Обработка нажатия на элемент списка
+            currentIP = messageHandler.getDeviceIPs().get(position);
+            messageHandler.setCurrentIpUdp(currentIP);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    messageHandler.sendMessageUDPStart();
+                    Intent intent = new Intent(MainActivity.this, UDPChat.class);
+                    startActivity(intent);
                 }
-                // Обработка нажатия на элемент списка
-                String deviceIP = messageHandler.getDeviceIPs().get(position);
-                currentIP = deviceIP;
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        messageHandler.establishUDPConnection(deviceIP, 12345);
-                    }
-                }).start();
+            }).start();
 
-            }
         });
-        myButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String nickname = String.valueOf(editMessage.getText());
+        myButton.setOnClickListener(view -> {
+            String nickname = String.valueOf(editMessage.getText());
 
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        messageHandler.setNickName(nickname);
-                    }
-                }).start();
-            }
+            new Thread(() -> messageHandler.setNickName(nickname)).start();
         });
 
         myButtonRefresh.setOnClickListener(view -> {
@@ -107,17 +99,14 @@ public class MainActivity extends AppCompatActivity {
             deviceIPAdapter.updateDeviceIPs(updatedDeviceIPs);
 
         });
-        igmpHelloSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                igmpHelloEnabled = isChecked;
-                if (isChecked) {
-                    // Запуск потока для отправки IGMP Hello
-                    messageHandler.enableIGMPHello();
-                } else {
-                    // Остановка отправки IGMP Hello
-                    messageHandler.disableIGMPHello();
-                }
+
+        igmpHelloSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // Запуск потока для отправки IGMP Hello
+                messageHandler.enableIGMPHello();
+            } else {
+                // Остановка отправки IGMP Hello
+                messageHandler.disableIGMPHello();
             }
         });
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -145,4 +134,16 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog dialog = builder.create();  // Создание диалогового окна
         dialog.show();  // Отображение диалогового окна
     }
+
+    @Override
+    public void onReceiveStartChat() {
+        // Реакция на событие "START_CHAT"
+        runOnUiThread(() -> {
+            // Ваш код для запуска новой активности или выполнения других действий
+            Intent intent = new Intent(MainActivity.this, UDPChat.class);
+            startActivity(intent);
+        });
+    }
+
+
 }

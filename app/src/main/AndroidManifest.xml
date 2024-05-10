@@ -18,6 +18,11 @@
         android:theme="@style/Theme.IGMPChat"
         tools:targetApi="31">
         <activity
+            android:name=".UDPChat"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+        />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

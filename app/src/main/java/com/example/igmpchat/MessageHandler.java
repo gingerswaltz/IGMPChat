@@ -3,7 +3,6 @@ package com.example.igmpchat;
 import android.util.Log;
 
 import java.io.IOException;
-import java.io.Serial;
 import java.io.Serializable;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -15,16 +14,39 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.Objects;
+import java.util.List;
 
 public class MessageHandler implements Serializable {
     private MulticastSocket socket;
     private String lastReceivedMessage = "";
     private ArrayList<String> deviceIPs = new ArrayList<>();
+    private String currentIpUdp;
     private DatagramSocket datagramSocket;
     private String nickName;
 
+    private List<MessageObserver> observers = new ArrayList<>();
 
+    public void addObserver(MessageObserver observer) {
+        observers.add(observer);
+    }
+
+    public void removeObserver(MessageObserver observer) {
+        observers.remove(observer);
+    }
+
+    private void notifyObservers() {
+        for (MessageObserver observer : observers) {
+            observer.onReceiveStartChat();
+        }
+    }
+    public MessageHandler(MulticastSocket socket, InetAddress multicastGroup, int multicastPort) {
+        this.socket = socket;
+        this.multicastGroup = multicastGroup;
+        this.multicastPort = multicastPort;
+    }
+
+
+    // todo : никнеймы вставлять в рассылку igmp
     public String getNickName() {
         return nickName;
     }
@@ -33,6 +55,7 @@ public class MessageHandler implements Serializable {
         if (nickName == null || nickName.isEmpty()) return;
         this.nickName = nickName;
     }
+
     // Метод для настройки UDP приемника для прослушивания определенного порта
     public void initUDPReceiver(int port) {
         try {
@@ -49,11 +72,7 @@ public class MessageHandler implements Serializable {
     private InetAddress multicastGroup;
     private int multicastPort;
 
-    public MessageHandler(MulticastSocket socket, InetAddress multicastGroup, int multicastPort) {
-        this.socket = socket;
-        this.multicastGroup = multicastGroup;
-        this.multicastPort = multicastPort;
-    }
+
 
     public void startListening() {
         Thread receiverThread = new Thread(() -> {
@@ -87,34 +106,32 @@ public class MessageHandler implements Serializable {
             e.printStackTrace();
         }
     }
-    public void sendMessageUDP(String message, String ipAddress, int port) {
+    public void sendMessageUDPStart() {
+        DatagramSocket socket = null;
         try {
-            message = nickName + ": " + message;
-            DatagramSocket socket = new DatagramSocket();
-            InetAddress address = InetAddress.getByName(ipAddress);
+            int port = 12346;
+            String message = "START_CHAT";
 
+            socket = new DatagramSocket();
+            InetAddress address = InetAddress.getByName(currentIpUdp);
             // Создание DatagramPacket
             byte[] sendData = message.getBytes();
             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, port);
-            // Преобразуем строку в массив байтов
-            byte[] buffer = message.getBytes();
-            // Создаем пакет с данными для отправки
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, port);
-            // Отправляем пакет
-            socket.send(packet);
             // Отправка сообщения
             socket.send(sendPacket);
             Log.d("SendMessage", "Сообщение UDP отправлено: " + message + " на " + address.getHostAddress() + ":" + port);
         } catch (UnknownHostException e) {
-            Log.e("SendMessage", "Неизвестный хост: " + ipAddress);
+            Log.e("SendMessage", "Неизвестный хост: " + currentIpUdp);
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            if (socket != null) {
+                socket.close(); // Закрытие сокета после использования
+            }
         }
     }
 
-    public String getLastReceivedMessage() {
-        return lastReceivedMessage;
-    }
+
 
     // Новая логика для отправки сообщения "IGMP Hello %ip_address%" каждые 3 секунды
     private void startIGMPHello() {
@@ -190,16 +207,19 @@ public class MessageHandler implements Serializable {
         return deviceIPs;
     }
 
-    public void establishUDPConnection(String ipAddress, int port) {
+    public void setCurrentIpUdp(String currentIpUdp){
+        this.currentIpUdp = currentIpUdp;
+    }
+    public void establishUDPConnection() {
         try {
-            InetAddress address = InetAddress.getByName(ipAddress);
-            DatagramSocket datagramSocket = new DatagramSocket(port);
+            InetAddress address = InetAddress.getByName(currentIpUdp);
+            DatagramSocket datagramSocket = new DatagramSocket(12345);
             // Устанавливаем адрес и порт для отправки
-            datagramSocket.connect(address, port);
+            datagramSocket.connect(address, 12345);
 
-            Log.d("UDPConnection", "UDP connection established with " + ipAddress + ":" + port);
+           // Log.d("UDPConnection", "UDP connection established with " + currentIpUdp + ":" + 123456);
         } catch (UnknownHostException e) {
-            Log.e("UDPConnection", "Unknown host: " + ipAddress);
+            Log.e("UDPConnection", "Unknown host: " + currentIpUdp);
         } catch (SocketException e) {
             Log.e("UDPConnection", "Socket exception: " + e.getMessage());
         }
@@ -213,7 +233,10 @@ public class MessageHandler implements Serializable {
                 while (true) {
                     datagramSocket.receive(packet);
                     String message = new String(packet.getData(), 0, packet.getLength());
-                    lastReceivedMessage = message;
+                    if(message.startsWith("START_CHAT")){
+                        notifyObservers();
+                    }
+
                     Log.d("UDPReceiver", "Received message: " + message);
                 }
             } catch (IOException e) {
