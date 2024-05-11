@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.text.Html;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -26,36 +27,34 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
     private String currentIpAddress = null;
     private String nickName;
     private ScrollView scrollView;
+    private LinearLayout layoutInput;
+    private boolean keyboardVisible = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_udpchat);
+
         editText = findViewById(R.id.editMessage);
         buttonSend = findViewById(R.id.buttonSend);
         scrollView = findViewById(R.id.scrollView);
         messageContainer = findViewById(R.id.messageContainer);
-        Intent intent = getIntent();
+        layoutInput = findViewById(R.id.layoutInput);
 
-        // Получение данных из Intent
+        Intent intent = getIntent();
         if (intent != null) {
             Bundle extras = intent.getExtras();
             if (extras != null) {
-                // Получение текущего IP-адреса
                 currentIpAddress = extras.getString("currentIpaddress");
-
-                // Получение никнейма
                 nickName = extras.getString("nickName");
             }
         }
+
         try {
-            // Создание экземпляра UdpManager с текущим IP-адресом и портом 12347
             udpManager = new UdpManager(currentIpAddress, 12347, nickName);
-            udpManager.setMessageListener(this); // Установка текущей активности в качестве слушателя сообщений
-            udpManager.startListening(); // Начало прослушивания входящих сообщений
+            udpManager.setMessageListener(this);
+            udpManager.startListening();
         } catch (Exception e) {
-            // Обработка исключения, возникшего при создании экземпляра UdpManager
             e.printStackTrace();
         }
 
@@ -65,36 +64,54 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
             return insets;
         });
 
-        // Добавляем слушателя для кнопки отправки
         buttonSend.setOnClickListener(v -> {
-
             String message = editText.getText().toString().trim();
             if (!message.isEmpty()) {
-                // Добавляем отправленное сообщение в контейнер сообщений
                 addMessageToContainer("You: " + message);
                 udpManager.sendMessage(message);
-                // Очищаем поле ввода
                 editText.getText().clear();
-            } else return;
+            }
+        });
 
+        scrollView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                int heightDiff = scrollView.getRootView().getHeight() - scrollView.getHeight();
+                if (heightDiff > 200) {
+                    if (!keyboardVisible) {
+                        keyboardVisible = true;
+                        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
+                        moveInputField(true);
+                    }
+                } else {
+                    if (keyboardVisible) {
+                        keyboardVisible = false;
+                        moveInputField(false);
+                    }
+                }
+            }
         });
     }
 
-    // Метод вызывается при получении нового сообщения
+    private void moveInputField(boolean moveUp) {
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) layoutInput.getLayoutParams();
+        if (moveUp) {
+            params.bottomMargin = 0; // Поле ввода должно оставаться на месте
+        } else {
+            params.bottomMargin = 0;
+        }
+        layoutInput.setLayoutParams(params);
+    }
+
     @Override
     public void onMessageReceived(String message) {
-        // Добавьте код для отображения входящего сообщения на интерфейсе
         addMessageToContainer(message);
     }
 
-    // Метод для добавления сообщения в контейнер сообщений
     private void addMessageToContainer(String message) {
         TextView textView = new TextView(this);
         textView.setText(message);
-        // Добавляем текстовое представление в начало контейнера сообщений
         messageContainer.addView(textView);
-        // Прокручиваем ScrollView вниз, чтобы новое сообщение было видимо
-        scrollView.fullScroll(View.FOCUS_DOWN);
+        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
     }
 }
-
