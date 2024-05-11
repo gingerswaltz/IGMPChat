@@ -1,18 +1,19 @@
 package com.example.igmpchat;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.Html;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewTreeObserver;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -91,6 +92,20 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
                 }
             }
         });
+
+        // Handle the back button event
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (keyboardVisible) {
+                    closeKeyboard();
+                } else {
+                    setEnabled(false);
+                    udpManager.sendLeaveMessage();
+                    finish();
+                }
+            }
+        });
     }
 
     private void moveInputField(boolean moveUp) {
@@ -105,13 +120,46 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
 
     @Override
     public void onMessageReceived(String message) {
-        addMessageToContainer(message);
-    }
+        if (message.equals("CODE___200___EXIT")) {
+            // Собеседник вышел из чата
+            showAlert(UDPChat.this, "Собеседник вышел", "Собеседник вышел из чата","Покинуть чат");
 
+            // Вызываем событие OnBackPressed
+            onBackPressed();
+        } else {
+            // Обычное сообщение
+            addMessageToContainer(message);
+        }
+    }
     private void addMessageToContainer(String message) {
         TextView textView = new TextView(this);
         textView.setText(message);
         messageContainer.addView(textView);
         scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
+    }
+
+    public void closeKeyboard() {
+        View view = this.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+            keyboardVisible = false; // Обновляем статус видимости клавиатуры
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        udpManager.stopListening();
+    }
+
+    public void showAlert(Context context, String title, String message, String buttonTitle) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(title)          // Установка заголовка диалогового окна
+                .setMessage(message)      // Установка сообщения диалогового окна
+                .setPositiveButton(buttonTitle, null);  // Добавление кнопки "OK", без действия
+
+        AlertDialog dialog = builder.create();  // Создание диалогового окна
+        dialog.show();  // Отображение диалогового окна
     }
 }

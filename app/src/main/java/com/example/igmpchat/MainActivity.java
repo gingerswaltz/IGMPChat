@@ -2,6 +2,7 @@ package com.example.igmpchat;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -50,6 +51,10 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
         // свитч режима discover
         Switch igmpHelloSwitch = findViewById(R.id.igmpHelloSwitch);
 
+        // Восстановление значения из SharedPreferences
+        SharedPreferences preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        String message = preferences.getString("editMessage", "User"); // Второй параметр - значение по умолчанию
+        editMessage.setText(message);
         multicastManager = new MulticastManager("239.255.255.250", 1900);
         try {
             multicastManager.connect();
@@ -73,6 +78,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
                 showAlert(MainActivity.this, "Не введено имя", "Пожалуйста, введите свое имя и нажмите Submit");
                 return;
             }
+
             // Обработка нажатия на элемент списка
             currentIP = messageHandler.getDeviceIPs().get(position);
             messageHandler.setCurrentIpUdp(currentIP);
@@ -141,15 +147,28 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
     public void onReceiveStartChat(String ipAddress) {
         // Реакция на событие "START_CHAT"
         runOnUiThread(() -> {
+            String nickname = String.valueOf(editMessage.getText());
+
             // Ваш код для запуска новой активности или выполнения других действий
             currentIP = ipAddress;
             Intent intent = new Intent(MainActivity.this, UDPChat.class);
 
             intent.putExtra("currentIpaddress", currentIP);
-            intent.putExtra("nickName", messageHandler.getNickName());
+            intent.putExtra("nickName", nickname);
             startActivity(intent);
         });
     }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Получаем значение из EditText
+        String message = editMessage.getText().toString();
 
+        // Сохраняем это значение в SharedPreferences
+        SharedPreferences preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("editMessage", message);
+        editor.apply();
+    }
 
 }

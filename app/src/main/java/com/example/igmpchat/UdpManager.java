@@ -79,6 +79,23 @@ public class UdpManager {
         }).start();
     }
 
+    public void sendLeaveMessage() {
+        new Thread(() -> {
+            try {
+                InetAddress address = InetAddress.getByName(this.ipAddress);
+                String finalMessage = "CODE___200___EXIT";
+                byte[] sendData = finalMessage.getBytes();
+                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, port);
+                DatagramSocket sendSocket = new DatagramSocket();
+                sendSocket.send(sendPacket);
+                sendSocket.close();
+                Log.d(TAG, "Sent leave message: " + finalMessage + " " + this.ipAddress);
+            } catch (IOException e) {
+                Log.e(TAG, "Error while sending UDP leave message: " + e.getMessage());
+            }
+        }).start();
+    }
+
     public interface MessageListener {
         void onMessageReceived(String message);
     }
