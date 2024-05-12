@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements MessageObserver {
     private EditText editMessage;
@@ -63,7 +64,8 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
                     multicastManager.getMulticastPort());
             messageHandler.startListening();
             // Создание адаптера и установка его в RecyclerView
-            deviceIPAdapter = new DeviceIPAdapter(messageHandler.getDeviceIPs());
+            deviceIPAdapter = new DeviceIPAdapter(messageHandler.getIpNicknameMap());
+
             recyclerViewDeviceIPs.setAdapter(deviceIPAdapter);
             messageHandler.initUDPReceiver(12346); // Настройка приемника для прослушивания порта 12346
             messageHandler.receiveUDPMessage();
@@ -80,7 +82,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
             }
 
             // Обработка нажатия на элемент списка
-            currentIP = messageHandler.getDeviceIPs().get(position);
+            currentIP = (new ArrayList<>(messageHandler.getIpNicknameMap().keySet())).get(position).split("_")[0];
             messageHandler.setCurrentIpUdp(currentIP);
             new Thread(new Runnable() {
                 @Override
@@ -103,10 +105,10 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
         myButtonRefresh.setOnClickListener(view -> {
             if (messageHandler == null) return;
             // Обновление списка устройств при нажатии на кнопку Refresh
-            ArrayList<String> updatedDeviceIPs = messageHandler.getDeviceIPs(); // Получите новый список устройств
-            deviceIPAdapter.updateDeviceIPs(updatedDeviceIPs);
-
+            Map<String, String> updatedIpNicknameMap = messageHandler.getIpNicknameMap(); // Получите новый словарь IP-адресов и никнеймов
+            deviceIPAdapter.updateDeviceIPs(updatedIpNicknameMap);
         });
+
 
         igmpHelloSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {

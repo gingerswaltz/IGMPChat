@@ -14,15 +14,26 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class MessageHandler implements Serializable {
+public class MessageHandler {
     private MulticastSocket socket;
     private ArrayList<String> deviceIPs = new ArrayList<>();
     private String currentIpUdp;
     private DatagramSocket datagramSocket;
-    private String nickName;
 
+
+    // Словарь для хранения соответствия IP-адресов и никнеймов
+    private Map<String, String> ipNicknameMap = new HashMap<>();
+    // Метод для получения словаря IP-адресов и никнеймов
+    public Map<String, String> getIpNicknameMap() {
+        return ipNicknameMap;
+    }
+
+    // ник
+    private String nickName;
     private List<MessageObserver> observers = new ArrayList<>();
 
     public void addObserver(MessageObserver observer) {
@@ -44,15 +55,12 @@ public class MessageHandler implements Serializable {
         this.multicastPort = multicastPort;
     }
 
-
-    // todo : никнеймы вставлять в рассылку igmp
-    public String getNickName() {
-        return nickName;
-    }
-
     public void setNickName(String nickName){
         if (nickName == null || nickName.isEmpty()) return;
         this.nickName = nickName;
+    }
+    public String getNickName(){
+        return nickName;
     }
 
     // Метод для настройки UDP приемника для прослушивания определенного порта
@@ -137,7 +145,7 @@ public class MessageHandler implements Serializable {
             try {
                 while (igmpHelloEnabled) {
                     String ipAddress = getLocalIPAddress(); // Получение IP-адреса устройства
-                    String message = "IGMP Hello " + ipAddress;
+                    String message = "IGMP Hello " + ipAddress+"_"+ nickName;
                     sendMessage(message, multicastGroup, multicastPort);
                     //Log.d("IGMP HELLO SENDER", "Sending igmp hello: " + message);
 
@@ -189,21 +197,22 @@ public class MessageHandler implements Serializable {
             igmpHelloThread.interrupt();
         }
     }
+    // В процессе обработки сообщения "IGMP Hello" извлекаем IP и никнейм
     private void processIGMPHelloMessage(String message) {
-        // Извлечение IP-адреса из сообщения "IGMP Hello"
         String[] parts = message.split(" ");
         if (parts.length >= 3) {
-            String ipAddress = parts[2]; // IP-адрес находится в третьей части сообщения
-            // Добавление IP-адреса в массив, если его еще нет там
-            if (!deviceIPs.contains(ipAddress)) {
-                deviceIPs.add(ipAddress);
-                //Log.d("MessageHandler", "New device discovered: " + ipAddress);
+            String ipAddress = parts[2];
+            int underscoreIndex = message.indexOf("_");
+            if (underscoreIndex != -1) {
+                String nickname = message.substring(underscoreIndex + 1);
+                // Проверяем, есть ли IP-адрес уже в списке
+                if (!ipNicknameMap.containsKey(ipAddress)) {
+                    ipNicknameMap.put(ipAddress, nickname);
+                }
             }
         }
     }
-    public ArrayList<String> getDeviceIPs() {
-        return deviceIPs;
-    }
+
 
     public void setCurrentIpUdp(String currentIpUdp){
         this.currentIpUdp = currentIpUdp;
@@ -215,7 +224,7 @@ public class MessageHandler implements Serializable {
             // Устанавливаем адрес и порт для отправки
             datagramSocket.connect(address, 12345);
 
-           // Log.d("UDPConnection", "UDP connection established with " + currentIpUdp + ":" + 123456);
+            // Log.d("UDPConnection", "UDP connection established with " + currentIpUdp + ":" + 123456);
         } catch (UnknownHostException e) {
             Log.e("UDPConnection", "Unknown host: " + currentIpUdp);
         } catch (SocketException e) {
@@ -247,3 +256,6 @@ public class MessageHandler implements Serializable {
     }
 
 }
+
+
+

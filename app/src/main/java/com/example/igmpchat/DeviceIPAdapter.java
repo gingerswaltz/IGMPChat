@@ -9,21 +9,21 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 public class DeviceIPAdapter extends RecyclerView.Adapter<DeviceIPAdapter.DeviceIPViewHolder> {
-    private ArrayList<String> deviceIPs;
+    private Map<String, String> ipNicknameMap;
     private OnItemClickListener mListener;
 
-    public DeviceIPAdapter(ArrayList<String> deviceIPs) {
-        this.deviceIPs = deviceIPs;
+    public DeviceIPAdapter(Map<String, String> ipNicknameMap) {
+        this.ipNicknameMap = ipNicknameMap;
     }
-
     public interface OnItemClickListener {
         void onItemClick(int position);
     }
     // Метод для обновления списка устройств
-    public void updateDeviceIPs(ArrayList<String> deviceIPs) {
-        this.deviceIPs = deviceIPs;
+    public void updateDeviceIPs(Map<String, String> ipNicknameMap) {
+        this.ipNicknameMap = ipNicknameMap;
         notifyDataSetChanged(); // Уведомляем адаптер об изменениях
     }
     public void setOnItemClickListener(OnItemClickListener listener) {
@@ -38,26 +38,26 @@ public class DeviceIPAdapter extends RecyclerView.Adapter<DeviceIPAdapter.Device
 
     @Override
     public void onBindViewHolder(@NonNull DeviceIPViewHolder holder, int position) {
-        String deviceIP = deviceIPs.get(position);
-        holder.textViewDeviceIP.setText(deviceIP);
+        String ipAddress = (new ArrayList<>(ipNicknameMap.keySet())).get(position);
+        String nickname = ipNicknameMap.get(ipAddress);
+        holder.bind(nickname);
 
+        final int itemPosition = position; // объявление финальной переменной для позиции
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mListener != null) {
-                    int position = holder.getAdapterPosition();
-                    if (position != RecyclerView.NO_POSITION) {
-                        mListener.onItemClick(position);
-                    }
+                    mListener.onItemClick(itemPosition); // использование itemPosition вместо position
                 }
             }
         });
     }
 
 
+
     @Override
     public int getItemCount() {
-        return deviceIPs.size();
+        return ipNicknameMap.size();
     }
 
     public static class DeviceIPViewHolder extends RecyclerView.ViewHolder {
@@ -68,8 +68,8 @@ public class DeviceIPAdapter extends RecyclerView.Adapter<DeviceIPAdapter.Device
             textViewDeviceIP = itemView.findViewById(R.id.textViewDeviceIP);
         }
 
-        public void bind(String deviceIP) {
-            textViewDeviceIP.setText(deviceIP);
+        public void bind(String nickname) {
+            textViewDeviceIP.setText(nickname);
         }
     }
 }
