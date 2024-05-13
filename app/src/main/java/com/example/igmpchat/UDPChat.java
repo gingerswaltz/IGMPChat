@@ -122,11 +122,10 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
     public void onMessageReceived(String message) {
         if (message.equals("CODE___200___EXIT")) {
             // Собеседник вышел из чата
-            showAlert(UDPChat.this, "Собеседник вышел", "Собеседник вышел из чата","OK");
+            showAlert(UDPChat.this, "Собеседник вышел", "Собеседник вышел из чата","Покинуть чат");
 
-            keyboardVisible = false;
-            getOnBackPressedDispatcher();
-           //ы finish();
+            // Вызываем событие OnBackPressed
+            onBackPressed();
         } else {
             // Обычное сообщение
             addMessageToContainer(message);

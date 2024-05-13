@@ -27,7 +27,6 @@ public class MessageHandler {
 
     // Словарь для хранения соответствия IP-адресов и никнеймов
     private Map<String, String> ipNicknameMap = new HashMap<>();
-
     // Метод для получения словаря IP-адресов и никнеймов
     public Map<String, String> getIpNicknameMap() {
         return ipNicknameMap;
@@ -50,19 +49,17 @@ public class MessageHandler {
             observer.onReceiveStartChat(ipAddress);
         }
     }
-
     public MessageHandler(MulticastSocket socket, InetAddress multicastGroup, int multicastPort) {
         this.socket = socket;
         this.multicastGroup = multicastGroup;
         this.multicastPort = multicastPort;
     }
 
-    public void setNickName(String nickName) {
+    public void setNickName(String nickName){
         if (nickName == null || nickName.isEmpty()) return;
         this.nickName = nickName;
     }
-
-    public String getNickName() {
+    public String getNickName(){
         return nickName;
     }
 
@@ -76,12 +73,12 @@ public class MessageHandler {
             throw new RuntimeException(e);
         }
     }
-
     private boolean igmpHelloEnabled = true;
 
     private Thread igmpHelloThread;
     private InetAddress multicastGroup;
     private int multicastPort;
+
 
 
     public void startListening() {
@@ -92,9 +89,10 @@ public class MessageHandler {
                 while (true) {
                     socket.receive(packet);
                     String message = new String(packet.getData(), 0, packet.getLength());
-                    if (message.startsWith("IGMP Hello")) {
+                    if(message.startsWith("IGMP Hello")){
                         processIGMPHelloMessage(message);
-                    } else if (!message.startsWith("M-SEARCH") && !message.startsWith("NOTIFY")) {
+                    } else
+                    if (!message.startsWith("M-SEARCH") && !message.startsWith("NOTIFY")) {
                         //Log.d("MessageHandler", "Received message: " + message);
                     }
                 }
@@ -114,12 +112,11 @@ public class MessageHandler {
             e.printStackTrace();
         }
     }
-
     public void sendMessageUDPStart() {
         DatagramSocket socket = null;
         try {
             int port = 12346;
-            String message = "START_CHAT, IP:" + getLocalIPAddress();
+            String message = "START_CHAT, IP:"+getLocalIPAddress();
 
             socket = new DatagramSocket();
             InetAddress address = InetAddress.getByName(currentIpUdp);
@@ -141,13 +138,14 @@ public class MessageHandler {
     }
 
 
+
     // Новая логика для отправки сообщения "IGMP Hello %ip_address%" каждые 3 секунды
     private void startIGMPHello() {
         igmpHelloThread = new Thread(() -> {
             try {
                 while (igmpHelloEnabled) {
                     String ipAddress = getLocalIPAddress(); // Получение IP-адреса устройства
-                    String message = "IGMP Hello " + ipAddress + "_" + nickName;
+                    String message = "IGMP Hello " + ipAddress+"_"+ nickName;
                     sendMessage(message, multicastGroup, multicastPort);
                     //Log.d("IGMP HELLO SENDER", "Sending igmp hello: " + message);
 
@@ -199,7 +197,6 @@ public class MessageHandler {
             igmpHelloThread.interrupt();
         }
     }
-
     // В процессе обработки сообщения "IGMP Hello" извлекаем IP и никнейм
     private void processIGMPHelloMessage(String message) {
         String[] parts = message.split(" ");
@@ -217,10 +214,9 @@ public class MessageHandler {
     }
 
 
-    public void setCurrentIpUdp(String currentIpUdp) {
+    public void setCurrentIpUdp(String currentIpUdp){
         this.currentIpUdp = currentIpUdp;
     }
-
     public void establishUDPConnection() {
         try {
             InetAddress address = InetAddress.getByName(currentIpUdp);
@@ -244,7 +240,7 @@ public class MessageHandler {
                 while (true) {
                     datagramSocket.receive(packet);
                     String message = new String(packet.getData(), 0, packet.getLength());
-                    if (message.startsWith("START_CHAT")) {
+                    if(message.startsWith("START_CHAT")){
                         String[] parts = message.split(":");
                         String ipAddress = parts[1].trim();
                         notifyObservers(ipAddress);
@@ -259,30 +255,7 @@ public class MessageHandler {
         receiverThread.start();
     }
 
-    public void sendConnectionResponseAsync(String ipAddress, boolean accept) {
-        new Thread(() -> {
-            sendConnectionResponse(ipAddress, accept);
-        }).start();
-    }
-
-    private void sendConnectionResponse(String ipAddress, boolean accept) {
-        String response = accept ? "ACCEPT" : "REJECT";
-        String message = "CONNECTION_RESPONSE:" + response;
-
-        DatagramSocket socket = null;
-        try {
-            socket = new DatagramSocket();
-            InetAddress address = InetAddress.getByName(ipAddress);
-            byte[] sendData = message.getBytes();
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, 12345);
-            socket.send(sendPacket);
-            Log.d("SendResponse", "Connection response sent to: " + ipAddress);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (socket != null) {
-                socket.close();
-            }
-        }
-    }
 }
+
+
+
