@@ -1,6 +1,7 @@
 package com.example.igmpchat;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -74,21 +75,18 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
             }
         });
 
-        scrollView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                int heightDiff = scrollView.getRootView().getHeight() - scrollView.getHeight();
-                if (heightDiff > 200) {
-                    if (!keyboardVisible) {
-                        keyboardVisible = true;
-                        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
-                        moveInputField(true);
-                    }
-                } else {
-                    if (keyboardVisible) {
-                        keyboardVisible = false;
-                        moveInputField(false);
-                    }
+        scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            int heightDiff = scrollView.getRootView().getHeight() - scrollView.getHeight();
+            if (heightDiff > 200) {
+                if (!keyboardVisible) {
+                    keyboardVisible = true;
+                    scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
+                    moveInputField(true);
+                }
+            } else {
+                if (keyboardVisible) {
+                    keyboardVisible = false;
+                    moveInputField(false);
                 }
             }
         });
@@ -122,10 +120,9 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
     public void onMessageReceived(String message) {
         if (message.equals("CODE___200___EXIT")) {
             // Собеседник вышел из чата
-            showAlert(UDPChat.this, "Собеседник вышел", "Собеседник вышел из чата","Покинуть чат");
+            showAlertAndFinish(UDPChat.this, "Собеседник вышел", "Собеседник вышел из чата","Покинуть чат");
 
-            // Вызываем событие OnBackPressed
-            onBackPressed();
+
         } else {
             // Обычное сообщение
             addMessageToContainer(message);
@@ -153,13 +150,19 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
         udpManager.stopListening();
     }
 
-    public void showAlert(Context context, String title, String message, String buttonTitle) {
+    // Метод для отображения диалогового окна и завершения активности
+    public void showAlertAndFinish(Context context, String title, String message, String buttonText) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(title)          // Установка заголовка диалогового окна
-                .setMessage(message)      // Установка сообщения диалогового окна
-                .setPositiveButton(buttonTitle, null);  // Добавление кнопки "OK", без действия
-
-        AlertDialog dialog = builder.create();  // Создание диалогового окна
-        dialog.show();  // Отображение диалогового окна
+        builder.setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(buttonText, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Закрываем активность
+                        finish();
+                    }
+                });
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 }

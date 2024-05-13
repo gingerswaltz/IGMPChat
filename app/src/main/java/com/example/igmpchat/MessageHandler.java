@@ -20,7 +20,6 @@ import java.util.Map;
 
 public class MessageHandler {
     private MulticastSocket socket;
-    private ArrayList<String> deviceIPs = new ArrayList<>();
     private String currentIpUdp;
     private DatagramSocket datagramSocket;
 
@@ -216,20 +215,6 @@ public class MessageHandler {
 
     public void setCurrentIpUdp(String currentIpUdp){
         this.currentIpUdp = currentIpUdp;
-    }
-    public void establishUDPConnection() {
-        try {
-            InetAddress address = InetAddress.getByName(currentIpUdp);
-            DatagramSocket datagramSocket = new DatagramSocket(12345);
-            // Устанавливаем адрес и порт для отправки
-            datagramSocket.connect(address, 12345);
-
-            // Log.d("UDPConnection", "UDP connection established with " + currentIpUdp + ":" + 123456);
-        } catch (UnknownHostException e) {
-            Log.e("UDPConnection", "Unknown host: " + currentIpUdp);
-        } catch (SocketException e) {
-            Log.e("UDPConnection", "Socket exception: " + e.getMessage());
-        }
     }
 
     public void receiveUDPMessage() {

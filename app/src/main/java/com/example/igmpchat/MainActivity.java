@@ -1,6 +1,7 @@
 package com.example.igmpchat;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -74,9 +75,9 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
             e.printStackTrace();
         }
 
-        // Установка обработчика нажатия на элемент списка
+        // Обработчик события нажатия на элемент RecyclerView
         deviceIPAdapter.setOnItemClickListener(position -> {
-            if (messageHandler.getNickName()==null){
+            if (messageHandler.getNickName() == null) {
                 showAlert(MainActivity.this, "Не введено имя", "Пожалуйста, введите свое имя и нажмите Submit");
                 return;
             }
@@ -84,17 +85,26 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
             // Обработка нажатия на элемент списка
             currentIP = (new ArrayList<>(messageHandler.getIpNicknameMap().keySet())).get(position).split("_")[0];
             messageHandler.setCurrentIpUdp(currentIP);
-            new Thread(new Runnable() {
+            String currentNick = (new ArrayList<>(messageHandler.getIpNicknameMap().keySet())).get(position).split("_")[1];
+            // Отображаем диалоговое окно подтверждения
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle("Подтверждение соединения");
+            builder.setMessage("Вы уверены, что хотите соединиться с пользователем " + currentNick+ "?");
+            builder.setPositiveButton("Да", (dialog, which) -> new Thread(() -> {
+                messageHandler.sendMessageUDPStart();
+                Intent intent = new Intent(MainActivity.this, UDPChat.class);
+                intent.putExtra("currentIpaddress", currentIP);
+                intent.putExtra("nickName", messageHandler.getNickName());
+                startActivity(intent);
+            }).start());
+            builder.setNegativeButton("Нет", new DialogInterface.OnClickListener() {
                 @Override
-                public void run() {
-                    messageHandler.sendMessageUDPStart();
-                    Intent intent = new Intent(MainActivity.this, UDPChat.class);
-                    intent.putExtra("currentIpaddress", currentIP);
-                    intent.putExtra("nickName", messageHandler.getNickName());
-                    startActivity(intent);
+                public void onClick(DialogInterface dialog, int which) {
+                    // Пользователь отказался от соединения, ничего не делаем
                 }
-            }).start();
-
+            });
+            AlertDialog dialog = builder.create();
+            dialog.show();
         });
         myButton.setOnClickListener(view -> {
             String nickname = String.valueOf(editMessage.getText());
@@ -112,6 +122,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
 
         igmpHelloSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
+                messageHandler.setNickName(String.valueOf(editMessage.getText()));
                 // Запуск потока для отправки IGMP Hello
                 messageHandler.enableIGMPHello();
             } else {
@@ -129,6 +140,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        messageHandler.removeObserver(this);
         if (multicastManager != null) {
             multicastManager.disconnect();
         }
