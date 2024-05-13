@@ -35,7 +35,6 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
 
     private String currentIP;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,11 +84,12 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
             // Обработка нажатия на элемент списка
             currentIP = (new ArrayList<>(messageHandler.getIpNicknameMap().keySet())).get(position).split("_")[0];
             messageHandler.setCurrentIpUdp(currentIP);
-            String currentNick = (new ArrayList<>(messageHandler.getIpNicknameMap().keySet())).get(position).split("_")[1];
+            String currentNick = (new ArrayList<>(messageHandler.getIpNicknameMap().keySet())).get(position)
+                    .split("_")[1];
             // Отображаем диалоговое окно подтверждения
             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
             builder.setTitle("Подтверждение соединения");
-            builder.setMessage("Вы уверены, что хотите соединиться с пользователем " + currentNick+ "?");
+            builder.setMessage("Вы уверены, что хотите соединиться с пользователем " + currentNick + "?");
             builder.setPositiveButton("Да", (dialog, which) -> new Thread(() -> {
                 messageHandler.sendMessageUDPStart();
                 Intent intent = new Intent(MainActivity.this, UDPChat.class);
@@ -113,12 +113,13 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
         });
 
         myButtonRefresh.setOnClickListener(view -> {
-            if (messageHandler == null) return;
+            if (messageHandler == null)
+                return;
             // Обновление списка устройств при нажатии на кнопку Refresh
-            Map<String, String> updatedIpNicknameMap = messageHandler.getIpNicknameMap(); // Получите новый словарь IP-адресов и никнеймов
+            Map<String, String> updatedIpNicknameMap = messageHandler.getIpNicknameMap(); // Получите новый словарь
+                                                                                          // IP-адресов и никнеймов
             deviceIPAdapter.updateDeviceIPs(updatedIpNicknameMap);
         });
-
 
         igmpHelloSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
@@ -149,12 +150,12 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
     // Метод для отображения диалогового окна Alert
     public void showAlert(Context context, String title, String message) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(title)          // Установка заголовка диалогового окна
-                .setMessage(message)      // Установка сообщения диалогового окна
-                .setPositiveButton("OK", null);  // Добавление кнопки "OK", без действия
+        builder.setTitle(title) // Установка заголовка диалогового окна
+                .setMessage(message) // Установка сообщения диалогового окна
+                .setPositiveButton("OK", null); // Добавление кнопки "OK", без действия
 
-        AlertDialog dialog = builder.create();  // Создание диалогового окна
-        dialog.show();  // Отображение диалогового окна
+        AlertDialog dialog = builder.create(); // Создание диалогового окна
+        dialog.show(); // Отображение диалогового окна
     }
 
     @Override
@@ -172,6 +173,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
             startActivity(intent);
         });
     }
+
     @Override
     protected void onPause() {
         super.onPause();

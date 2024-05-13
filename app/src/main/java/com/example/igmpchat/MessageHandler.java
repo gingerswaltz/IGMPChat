@@ -23,9 +23,9 @@ public class MessageHandler {
     private String currentIpUdp;
     private DatagramSocket datagramSocket;
 
-
     // Словарь для хранения соответствия IP-адресов и никнеймов
     private Map<String, String> ipNicknameMap = new HashMap<>();
+
     // Метод для получения словаря IP-адресов и никнеймов
     public Map<String, String> getIpNicknameMap() {
         return ipNicknameMap;
@@ -48,37 +48,40 @@ public class MessageHandler {
             observer.onReceiveStartChat(ipAddress);
         }
     }
+
     public MessageHandler(MulticastSocket socket, InetAddress multicastGroup, int multicastPort) {
         this.socket = socket;
         this.multicastGroup = multicastGroup;
         this.multicastPort = multicastPort;
     }
 
-    public void setNickName(String nickName){
-        if (nickName == null || nickName.isEmpty()) return;
+    public void setNickName(String nickName) {
+        if (nickName == null || nickName.isEmpty())
+            return;
         this.nickName = nickName;
     }
-    public String getNickName(){
+
+    public String getNickName() {
         return nickName;
     }
 
     // Метод для настройки UDP приемника для прослушивания определенного порта
     public void initUDPReceiver(int port) {
         try {
-            datagramSocket = new DatagramSocket(port, InetAddress.getByName(getLocalIPAddress())); // Прослушиваем определенный порт
+            datagramSocket = new DatagramSocket(port, InetAddress.getByName(getLocalIPAddress())); // Прослушиваем
+                                                                                                   // определенный порт
         } catch (SocketException e) {
             e.printStackTrace();
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
+
     private boolean igmpHelloEnabled = true;
 
     private Thread igmpHelloThread;
     private InetAddress multicastGroup;
     private int multicastPort;
-
-
 
     public void startListening() {
         Thread receiverThread = new Thread(() -> {
@@ -88,11 +91,10 @@ public class MessageHandler {
                 while (true) {
                     socket.receive(packet);
                     String message = new String(packet.getData(), 0, packet.getLength());
-                    if(message.startsWith("IGMP Hello")){
+                    if (message.startsWith("IGMP Hello")) {
                         processIGMPHelloMessage(message);
-                    } else
-                    if (!message.startsWith("M-SEARCH") && !message.startsWith("NOTIFY")) {
-                        //Log.d("MessageHandler", "Received message: " + message);
+                    } else if (!message.startsWith("M-SEARCH") && !message.startsWith("NOTIFY")) {
+                        // Log.d("MessageHandler", "Received message: " + message);
                     }
                 }
             } catch (IOException e) {
@@ -111,11 +113,12 @@ public class MessageHandler {
             e.printStackTrace();
         }
     }
+
     public void sendMessageUDPStart() {
         DatagramSocket socket = null;
         try {
             int port = 12346;
-            String message = "START_CHAT, IP:"+getLocalIPAddress();
+            String message = "START_CHAT, IP:" + getLocalIPAddress();
 
             socket = new DatagramSocket();
             InetAddress address = InetAddress.getByName(currentIpUdp);
@@ -124,7 +127,8 @@ public class MessageHandler {
             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, port);
             // Отправка сообщения
             socket.send(sendPacket);
-            Log.d("SendMessage", "Сообщение UDP отправлено: " + message + " на " + address.getHostAddress() + ":" + port);
+            Log.d("SendMessage",
+                    "Сообщение UDP отправлено: " + message + " на " + address.getHostAddress() + ":" + port);
         } catch (UnknownHostException e) {
             Log.e("SendMessage", "Неизвестный хост: " + currentIpUdp);
         } catch (IOException e) {
@@ -136,28 +140,27 @@ public class MessageHandler {
         }
     }
 
-
-
-    // Новая логика для отправки сообщения "IGMP Hello %ip_address%" каждые 3 секунды
+    // Новая логика для отправки сообщения "IGMP Hello %ip_address%" каждые 3
+    // секунды
     private void startIGMPHello() {
         igmpHelloThread = new Thread(() -> {
             try {
                 while (igmpHelloEnabled) {
                     String ipAddress = getLocalIPAddress(); // Получение IP-адреса устройства
-                    String message = "IGMP Hello " + ipAddress+"_"+ nickName;
+                    String message = "IGMP Hello " + ipAddress + "_" + nickName;
                     sendMessage(message, multicastGroup, multicastPort);
-                    //Log.d("IGMP HELLO SENDER", "Sending igmp hello: " + message);
+                    // Log.d("IGMP HELLO SENDER", "Sending igmp hello: " + message);
 
                     Thread.sleep(3000); // Отправка каждые 3 секунды
                 }
             } catch (InterruptedException e) {
                 // Поток был прерван, возможно, из-за отключения IGMP Hello
-                // Можно не обрабатывать это исключение, так как мы просто выходим из цикла и закрываем поток
+                // Можно не обрабатывать это исключение, так как мы просто выходим из цикла и
+                // закрываем поток
             }
         });
         igmpHelloThread.start();
     }
-
 
     private String getLocalIPAddress() {
         try {
@@ -169,7 +172,7 @@ public class MessageHandler {
                     Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
                     while (addresses.hasMoreElements()) {
                         InetAddress address = addresses.nextElement();
-                        //Log.d("LocalIPAddress", "Found IP address for eth0: " + address);
+                        // Log.d("LocalIPAddress", "Found IP address for eth0: " + address);
                         if (!address.isLoopbackAddress() && address instanceof Inet4Address) {
                             return address.getHostAddress();
                         }
@@ -181,7 +184,6 @@ public class MessageHandler {
         }
         return null;
     }
-
 
     // Включение отправки IGMP Hello
     public void enableIGMPHello() {
@@ -196,6 +198,7 @@ public class MessageHandler {
             igmpHelloThread.interrupt();
         }
     }
+
     // В процессе обработки сообщения "IGMP Hello" извлекаем IP и никнейм
     private void processIGMPHelloMessage(String message) {
         String[] parts = message.split(" ");
@@ -212,8 +215,7 @@ public class MessageHandler {
         }
     }
 
-
-    public void setCurrentIpUdp(String currentIpUdp){
+    public void setCurrentIpUdp(String currentIpUdp) {
         this.currentIpUdp = currentIpUdp;
     }
 
@@ -225,7 +227,7 @@ public class MessageHandler {
                 while (true) {
                     datagramSocket.receive(packet);
                     String message = new String(packet.getData(), 0, packet.getLength());
-                    if(message.startsWith("START_CHAT")){
+                    if (message.startsWith("START_CHAT")) {
                         String[] parts = message.split(":");
                         String ipAddress = parts[1].trim();
                         notifyObservers(ipAddress);
@@ -241,6 +243,3 @@ public class MessageHandler {
     }
 
 }
-
-
-

@@ -66,7 +66,7 @@ public class UdpManager {
         new Thread(() -> {
             try {
                 InetAddress address = InetAddress.getByName(this.ipAddress);
-                String finalMessage=this.nickname+": "+message;
+                String finalMessage = this.nickname + ": " + message;
                 byte[] sendData = finalMessage.getBytes();
                 DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, port);
                 DatagramSocket sendSocket = new DatagramSocket();

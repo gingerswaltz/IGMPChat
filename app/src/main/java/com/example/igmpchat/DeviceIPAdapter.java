@@ -18,17 +18,21 @@ public class DeviceIPAdapter extends RecyclerView.Adapter<DeviceIPAdapter.Device
     public DeviceIPAdapter(Map<String, String> ipNicknameMap) {
         this.ipNicknameMap = ipNicknameMap;
     }
+
     public interface OnItemClickListener {
         void onItemClick(int position);
     }
+
     // Метод для обновления списка устройств
     public void updateDeviceIPs(Map<String, String> ipNicknameMap) {
         this.ipNicknameMap = ipNicknameMap;
         notifyDataSetChanged(); // Уведомляем адаптер об изменениях
     }
+
     public void setOnItemClickListener(OnItemClickListener listener) {
         mListener = listener;
     }
+
     @NonNull
     @Override
     public DeviceIPViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -52,8 +56,6 @@ public class DeviceIPAdapter extends RecyclerView.Adapter<DeviceIPAdapter.Device
             }
         });
     }
-
-
 
     @Override
     public int getItemCount() {

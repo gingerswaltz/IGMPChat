@@ -120,14 +120,14 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
     public void onMessageReceived(String message) {
         if (message.equals("CODE___200___EXIT")) {
             // Собеседник вышел из чата
-            showAlertAndFinish(UDPChat.this, "Собеседник вышел", "Собеседник вышел из чата","Покинуть чат");
-
+            showAlertAndFinish(UDPChat.this, "Собеседник вышел", "Собеседник вышел из чата", "Покинуть чат");
 
         } else {
             // Обычное сообщение
             addMessageToContainer(message);
         }
     }
+
     private void addMessageToContainer(String message) {
         TextView textView = new TextView(this);
         textView.setText(message);
@@ -138,7 +138,7 @@ public class UDPChat extends AppCompatActivity implements UdpManager.MessageList
     public void closeKeyboard() {
         View view = this.getCurrentFocus();
         if (view != null) {
-            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
             keyboardVisible = false; // Обновляем статус видимости клавиатуры
         }
