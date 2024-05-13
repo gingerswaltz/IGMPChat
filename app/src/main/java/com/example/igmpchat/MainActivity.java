@@ -147,19 +147,31 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
 
     @Override
     public void onReceiveStartChat(String ipAddress) {
-        // Реакция на событие "START_CHAT"
         runOnUiThread(() -> {
-            String nickname = String.valueOf(editMessage.getText());
-
-            // Ваш код для запуска новой активности или выполнения других действий
-            currentIP = ipAddress;
-            Intent intent = new Intent(MainActivity.this, UDPChat.class);
-
-            intent.putExtra("currentIpaddress", currentIP);
-            intent.putExtra("nickName", nickname);
-            startActivity(intent);
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Incoming Connection Request")
+                    .setMessage("Accept connection request from " + ipAddress + "?")
+                    .setPositiveButton("Accept", (dialog, which) -> {
+                        messageHandler.sendConnectionResponseAsync(ipAddress, true);
+                        startChatWithIP(ipAddress);
+                    })
+                    .setNegativeButton("Reject", (dialog, which) -> {
+                        messageHandler.sendConnectionResponseAsync(ipAddress, false);
+                    })
+                    .show();
         });
     }
+
+
+
+    private void startChatWithIP(String ipAddress) {
+        String nickname = String.valueOf(editMessage.getText());
+        Intent intent = new Intent(MainActivity.this, UDPChat.class);
+        intent.putExtra("currentIpaddress", ipAddress);
+        intent.putExtra("nickName", nickname);
+        startActivity(intent);
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -172,5 +184,6 @@ public class MainActivity extends AppCompatActivity implements MessageObserver {
         editor.putString("editMessage", message);
         editor.apply();
     }
+
 
 }
